@@ -1,0 +1,51 @@
+{
+  "name": "vuetify-notifier",
+  "version": "0.0.7",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/vuetify-notifier.umd.cjs",
+  "module": "./dist/vuetify-notifier.js",
+  "exports": {
+    ".": {
+      "import": "./dist/vuetify-notifier.js",
+      "require": "./dist/vuetify-notifier.umd.cjs"
+    },
+    "./nuxt": {
+      "types": "./dist/nuxt/types.d.ts",
+      "import": "./dist/nuxt/module.mjs",
+      "require": "./dist/nuxt/module.cjs"
+    }
+  },
+  "types": "./src/types/index.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "build:nuxt": "nuxt-module-build nuxt --outDir ../dist/nuxt",
+    "build:web": "vue-tsc && vite build --config vite.web.config.ts",
+    "build:all": "npm run build && npm run build:nuxt && npm run build:web",
+    "preview": "vite preview --config=vite.web.config.ts"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.7",
+    "vue": "^3.2.47"
+  },
+  "devDependencies": {
+    "@nuxt/kit": "^3.4.2",
+    "@nuxt/module-builder": "^0.3.0",
+    "@nuxt/schema": "^3.4.2",
+    "@vitejs/plugin-vue": "^4.1.0",
+    "@vueuse/components": "^10.1.0",
+    "@vueuse/core": "^10.1.0",
+    "deepmerge": "^4.3.1",
+    "sass": "^1.62.0",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.1",
+    "vite-plugin-dts": "^2.3.0",
+    "vue-draggify": "^0.0.8",
+    "vue-tsc": "^1.4.3",
+    "vuetify": "^3.1.15"
+  }
+}
