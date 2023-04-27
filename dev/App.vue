@@ -47,7 +47,7 @@ import { reactive } from "vue";
 import { VCard } from "vuetify/components";
 import { SchedulerProps } from "../src/types";
 
-const schedulerConfig = reactive<SchedulerProps>({
+const schedulerConfig = reactive({
   dates: {
     from: '2017-01-01 06:00',
     to: '2017-01-01 21:00',
@@ -72,9 +72,9 @@ const schedulerConfig = reactive<SchedulerProps>({
       text: 'Click me',
     },
     {
-      resourceId: 'r2',
-      start: new Date(2017, 0, 1, 12),
-      end: new Date(2017, 0, 1, 13, 30),
+      resourceId: 'r1',
+      start: '2017-01-01 11:00',
+      end: '2017-01-01 12:00',
       text: 'Drag me ',
     },
     {

@@ -22,3 +22,17 @@ export const MouseDownResizer = (e: MouseEvent, width: number, onMouseMove: (new
   document.addEventListener('mouseup', onMouseUpHandler);
 
 };
+
+
+export const inRange = (x: number, min: number, max: number, condition: "[]" | "[)" | "(]" | "()" = "[]") => {
+  switch (condition) {
+    case "[]":
+      return x >= min && x <= max;
+    case "[)":
+      return x >= min && x < max;
+    case "(]":
+      return x > min && x <= max;
+    case "()":
+      return x > min && x < max;
+  }
+}

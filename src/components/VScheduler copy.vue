@@ -1,152 +1,32 @@
-<template>
-  <VCard>
-    <VToolbar>
 
-      <v-spacer />
-      {{ dayjs(startDate).format('YYYY-MM-DD') }}
-      <v-spacer />
-
-    </VToolbar>
-    <VTable fixed-header :height="height" class="scheduler" ref="tableRef">
-      <thead>
-        <tr>
-          <th ref="resourceHeadRef" class="pa-0">
-            <VSheet :width="resourcesStyles.width" color="red" ref="resourcesHeaderRef"> Name</VSheet>
-            <VSheet class="resizer" :height="tableHeight" @mousedown="onMouseDownResourcesColumn" ref="resizerRef">
-            </VSheet>
-          </th>
-          <template v-for="(item) in dateTimeRanges">
-            <th>
-              <VBtn :width="eventsStyles.width" block variant="text">{{ item.format("hh A") }}</VBtn>
-            </th>
-          </template>
-        </tr>
-      </thead>
-      <tbody>
-        <template v-for="(resource) in resources">
-          <tr>
-            <th class="text-none-wrap" ref="resourcesRefs">
-              <VListItem @click="" :title="resource.name" />
-            </th>
-            <td class="scheduler-item">
-              <template v-for="(event) in _events">
-                <UseDraggable :initialValue="{
-                  x: event.startPoint,
-                  y: event.endPoint - event.startPoint
-                }" :axis="'x'">
-
-                  <v-sheet class="scheduler-event elevation-5 d-flex align-center justify-space-between" height="80%"
-                    :color="event.color || 'white'" v-if="checkEventValid(resource, event)" :style="getEventStyles(event)"
-                    ref="eventRefs">
-                    <VSheet color="primary" width="5" height="100%"
-                      class="scheduler-event-resize flex-shrink-1 d-flex align-center justify-center"
-                      @mousedown="($event: any) => onMouseDownEventResize($event, event)">|
-                    </VSheet>
-                    <v-tooltip activator="parent" location="top">{{ dayjs(event.startDate).format('HH:mm')
-                    }} - {{ dayjs(event.endDate).format('HH:mm')
-}}</v-tooltip>
-                    <div class="flex-grow-1 pl-3">
-                      <div>
-                        {{ event.text }}
-                      </div>
-                    </div>
-                    <VSheet color="primary" width="5" height="100%"
-                      class="scheduler-event-resize flex-shrink-1 d-flex align-center justify-center"
-                      @mousedown="($event: any) => onMouseDownEventResize($event, event, true)">|
-                    </VSheet>
-                  </v-sheet>
-                </UseDraggable>
-              </template>
-            </td>
-            <template v-for="(time, index) in dateTimeRanges.length">
-              <td class="scheduler-item">
-                <!-- <template v-for="(event) in getEvents">
-                  <v-sheet class="scheduler-event elevation-5 d-flex align-center justify-space-between" height="80%"
-                    :color="event.color || 'white'"
-                    v-if="checkEventValid(resource, event, time, dateTimeRanges[index + 1])"
-                    :style="getEventStyles(event, time)">
-                    <VSheet color="primary" width="5" height="100%"
-                      class="scheduler-event-resize flex-shrink-1 d-flex align-center justify-center"
-                      @mousedown="($event: any) => onMouseDownEventResize($event, event)">|
-                    </VSheet>
-                    <v-tooltip activator="parent" location="top">{{ dayjs(event.startDate).format('HH:mm')
-                    }} - {{ dayjs(event.endDate).format('HH:mm')
-}}</v-tooltip>
-                    <div class="flex-grow-1 pl-3">
-                      <div>
-                        {{ event.text }}
-                      </div>
-                    </div>
-                    <VSheet color="primary" width="5" height="100%"
-                      class="scheduler-event-resize flex-shrink-1 d-flex align-center justify-center"
-                      @mousedown="($event: any) => onMouseDownEventResize($event, event, true)">|
-                    </VSheet>
-                  </v-sheet>
-                </template> -->
-              </td>
-            </template>
-          </tr>
-        </template>
-      </tbody>
-    </VTable>
-  </VCard>
-</template>
 
 <script setup lang="ts">
-import dayjs from "dayjs";
+import VueDraggify from "../../../vue-draggify/src/components/DraggifyEager.vue";
+import dayjs, { Dayjs } from 'dayjs';
 import isBetween from "dayjs/plugin/isBetween";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import type { Dayjs } from "dayjs";
-import { useElementSize } from '@vueuse/core'
-import { UseDraggable } from "@vueuse/components";
+dayjs.extend(isBetween);
+import { PropType, computed, onMounted, reactive, ref } from 'vue';
+import { SchedulerOptions, SchedulerEvent, SchedulerResource, SchedulerDate, SchedulerEventsOptions, SchedulerResourcesOptions } from "../types";
+import { VCard, VCardText, VSheet, VToolbar, VTable, VListItem, VCol, VList, VRow, VAppBar, VContainer, VDivider, VHover, VListItemTitle, VListItemSubtitle } from "vuetify/components";
+import { vScroll } from '@vueuse/components'
 
-
-
-import { computed, onMounted, ref } from 'vue';
-import type { PropType } from "vue";
-import { SchedulerEvent, SchedulerEventsOptions, SchedulerResource, SchedulerResourcesOptions, SchedulerOptions } from "../types";
-import { processExpression } from "@vue/compiler-core";
-
-const resourcesRefs = ref<HTMLElement[]>([]);
-const resourcesHeaderRef = ref<HTMLElement>();
-// const eventRefs = ref<HTMLElement[]>([]);
-// eventRefs.value.forEach((el) => {
-//   const { x, y, style } = useDraggable(el, {
-//     initialValue: { x: 40, y: 40 },
-//   })
-// })
-
-
-
-dayjs.extend(isSameOrBefore)
-dayjs.extend(isSameOrAfter)
-dayjs.extend(isBetween)
+import { MouseDownResizer } from "../utils";
+import { UseScrollReturn, useDebounceFn } from '@vueuse/core';
+import { defaultOptions } from "../utils/options";
+import deepMerge from "deepmerge";
+import { DraggifyDirection, DraggifyState } from '../../../vue-draggify/src/types';
+import { Resource } from '../types/resource';
+import { Event } from '../types/event';
+import { reactiveStyle } from "@vueuse/motion";
 
 const props = defineProps({
-  intervals: {
-    type: Number,
-    default: 30
-  },
-  height: {
-    type: [Number, String],
-    default: '100%'
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-
-  startDate: {
-    type: Date,
+  dates: {
+    type: Object as PropType<SchedulerDate>,
     default: () => {
-      return new Date()
-    }
-  },
-  endDate: {
-    type: Date,
-    default: () => {
-      return new Date()
+      return {
+        from: dayjs().set('hour', 6).set('minute', 0).set('second', 0),
+        to: dayjs().set('hour', 18).set('minute', 0).set('second', 0)
+      }
     }
   },
   resources: {
@@ -157,240 +37,349 @@ const props = defineProps({
     type: Array as PropType<SchedulerEvent[]>,
     default: () => []
   },
-  default: {
+  options: {
     type: Object as PropType<SchedulerOptions>,
     default: () => ({
       rowHeight: 56
     })
   },
-  resourcesConfig: {
-    type: Object as PropType<SchedulerResourcesOptions>,
-    default: () => ({
-      width: 100
-    })
-  },
-  eventsConfig: {
-    type: Object as PropType<SchedulerEventsOptions>,
-    default: () => ({
-      width: 180
-    })
+})
+
+const dates = ref({
+  from: dayjs(props.dates.from),
+  to: dayjs(props.dates.to)
+})
+
+const eventsContainerRef = ref<HTMLElement>();
+
+const onDragOver = (ev: any, data: DraggifyState, event: Event) => {
+  const targetElement = ev.target as HTMLElement;
+
+  if (targetElement.classList.contains('scheduler-events-rows')) {
+    targetElement.classList.add('scheduler-events-rows--dragover');
+  }
+};
+const onDragLeave = (ev: any, data: DraggifyState) => {
+  ev.preventDefault();
+
+  const targetElement = ev.target as HTMLElement;
+
+  if (targetElement.classList.contains('scheduler-events-rows')) {
+    targetElement.classList.remove('scheduler-events-rows--dragover');
+  }
+};
+const onDrop = (ev: any, data: DraggifyState, resourceIndex: number, eventIndex: number) => {
+  let targetElement = ev.target as HTMLElement;
+
+  if (!targetElement.classList.contains('scheduler-events-rows')) {
+    targetElement = targetElement.closest(".scheduler-events-rows") as HTMLElement;
   }
 
+  console.log('on drop');
+
+
+  if (!targetElement) {
+    return;
+  }
+
+  let event: any = resources.value[resourceIndex].events[eventIndex];
+  console.log(event);
+
+  let resourceId = targetElement.dataset.resourceId;
+  if (resourceId) {
+    event.resourceId = resourceId
+  }
+
+  event = {
+    ...event, ...{
+      width: data.width,
+      height: data.height,
+      x: data.x,
+      start: dates.value.from.add(data.x / pixelPerMinute.value, 'minute'),
+      end: dates.value.from.add((data.x + data.width) / pixelPerMinute.value, 'minute'),
+      y: 0
+    }
+  }
+
+
+
+
+  const eventIndexOriginal = events.value.findIndex(item => item.id === event.id)
+  events.value[eventIndexOriginal] = { ...event }
+};
+
+const onDragEnd = (ev: any, data: DraggifyState, resourceIndex: number, eventIndex: number) => {
+  const targetElement = ev.target as HTMLElement;
+
+  if (targetElement.classList.contains('scheduler-event-rows')) {
+    ev.preventDefault();
+    targetElement.classList.remove('scheduler-event-rows--dragover');
+  }
+};
+
+const onResizeEnd = (e: MouseEvent, data: any, resourceIndex: number, eventIndex: number) => {
+  e.preventDefault();
+
+  let event: any = resources.value[resourceIndex].events[eventIndex];
+
+  event = {
+    ...event, ...{
+      width: data.width,
+      height: data.height,
+      x: data.x,
+      start: dates.value.from.add(data.x / pixelPerMinute.value, 'minute'),
+      end: dates.value.from.add((data.x + data.width) / pixelPerMinute.value, 'minute'),
+      y: 0
+    }
+  }
+
+  const eventIndexOriginal = events.value.findIndex(item => item.id === event.id)
+  events.value[eventIndexOriginal] = { ...event }
+
+};
+
+const debouncedFn = useDebounceFn(() => {
+
+}, 1000)
+
+const options = reactive<SchedulerOptions>(deepMerge(defaultOptions, props.options) as SchedulerOptions)
+
+const pixelPerMinute = computed(() => {
+  return (options?.events?.width as number) / 60
 })
 
 
-const _events = ref<SchedulerEvent[]>(props.events.map((event) => {
-  const startDate = dayjs(event.startDate)
-  const endDate = dayjs(event.endDate)
-  return {
-    ...event,
-    startDate,
-    endDate,
-    startPoint: Math.round(startDate.diff(props.startDate, 'minute') * props.eventsConfig.width / 60),
-    endPoint: Math.round(endDate.diff(props.startDate, 'minute') * props.eventsConfig.width / 60),
-    topPoint: props.resources.findIndex((resource) => resource.id === event.resourceId) * props.default.rowHeight
-  }
-}))
+const { style: timeRangesStyles } = reactiveStyle({
+  backgroundSize: `${options.events?.width}px`,
+  backgroundImage: 'linear-gradient(to right, #c9c9c9 1px, transparent 1px)'
+})
 
-const checkEventValid = (resource: SchedulerResource, event: SchedulerEvent) => {
-  if (resource.id !== event.resourceId) {
-    return false
-  }
-  return true
-  // const start = dayjs(event.startDate)
+const { style: gridStyles } = reactiveStyle({
+  backgroundSize: `100% ${options?.rowHeight}px`,
+  'background-image': 'linear-gradient(to bottom, #000000 0px, transparent 0.5px)',
+})
 
-  // return start.isBetween(time, nextTime, 'minute', '[)') //isSameOrAfter(time) && start.isBefore(nextTime)
-}
+const events = ref<SchedulerEvent[]>(props.events.map((event, index) => ({
+  ...event,
+  id: event.id || index + 1,
+  start: dayjs(event.start),
+  end: dayjs(event.end),
+})))
 
-const getEventStyles = (event: SchedulerEvent) => {
-  const marginTop = Math.round(10 * props.default.rowHeight / 100)
-  return {
-    x: `${event.startPoint}px`,
-    // width: `${event.endPoint - event.startPoint}px`,
-    y: `10%`,
-  }
-}
-
-const resourcesStyles = ref<SchedulerResourcesOptions>(props.resourcesConfig)
-const eventsStyles = ref<SchedulerEventsOptions>(props.eventsConfig)
+const resources = computed<Resource[]>(() => {
+  const resourcesSorted = props.resources.map((resource, resourceIndex) => {
+    const items = events.value
+      .filter(eventFilter => eventFilter.resourceId === resource.id)
+      .sort((a, b) => {
+        return a.start.isAfter(b.start) ? 1 : -1
+      })
+      .map((eventMap, eventIndex) => {
+        eventMap.x = eventMap.x ?? Math.round((eventMap.start.diff(dates.value.from, 'minute')) * pixelPerMinute.value)
+        eventMap.width = eventMap.end.diff(eventMap.start, 'minute') * pixelPerMinute.value
+        eventMap.height = options.rowHeight
+        return eventMap
+      }).reduce((eventsReduce: SchedulerEvent[], event, eventIndex) => {
 
 
-const onMouseDownResourcesColumn = (e: MouseEvent) => {
-  let _x = e.clientX;
-  let _width = resourcesStyles.value.width;
+        const prev = eventsReduce[eventIndex - 1]
 
-  const onMouseMoveHandler = (event: MouseEvent) => {
-    const dx = event.clientX - _x;
-    resourcesStyles.value.width = _width + dx;
-  };
+        if (!prev) {
+          event.y = 0
+        } else {
+          if (event.start.isBetween(prev.start, prev.end, 'minute', "[)")) {
+            event.y = prev.y as number + options.rowHeight
+          } else {
+            event.y = prev.y
+          }
+        }
+        console.log({
+          id: event.id,
+          start: event.start.format('HH:mm'),
+          end: event.end.format('HH:mm'),
+          x: event.x,
+          y: event.y,
+          width: event.width,
+          height: event.height,
+        });
 
-  const onMouseUpHandler = (event: MouseEvent) => {
-    document.removeEventListener('mousemove', onMouseMoveHandler);
-    document.removeEventListener('mouseup', onMouseUpHandler);
-  };
+        return [
+          ...eventsReduce,
+          event
+        ]
+      }, [])
+    return new Resource({
+      ...resource,
+      events: items
+    })
+  }) as Resource[]
+  console.log(resourcesSorted);
 
-  document.addEventListener('mousemove', onMouseMoveHandler);
-  document.addEventListener('mouseup', onMouseUpHandler);
-};
+  return resourcesSorted
+})
 
-const onMouseDownEventResize = (e: MouseEvent, event: SchedulerEvent, isEnd = false) => {
-
-  let _x = e.clientX;
-
-
-  let _point = !isEnd ? event.startPoint : event.endPoint
-  let _date = !isEnd ? event.startDate : event.endDate
-
-  const onMouseMoveHandler = (e: MouseEvent) => {
-
-    const dx = e.clientX - _x;
-    const minute = Math.round(dx * 60 / props.eventsConfig.width)
-
-    !isEnd ? event.startPoint += dx : event.endPoint += dx
-
-    if (!isEnd) {
-      event.startPoint = _point + dx
-      if (minute % 15 === 0) {
-        event.startDate = _date.add(minute, 'minute')
-      }
-    }
-    else {
-      event.endPoint = _point + dx
-      if (minute % props.intervals === 0) {
-        event.startDate = _date.add(minute, 'minute')
-      }
-    }
-
-  };
-
-  const onMouseUpHandler = (e: MouseEvent) => {
-    event.startPoint = Math.round(event.startDate.diff(props.startDate, 'minute') * props.eventsConfig.width / 60)
-    event.endPoint = Math.round(event.endDate.diff(props.startDate, 'minute') * props.eventsConfig.width / 60)
-
-    document.removeEventListener('mousemove', onMouseMoveHandler);
-    document.removeEventListener('mouseup', onMouseUpHandler);
-  };
-
-  document.addEventListener('mousemove', onMouseMoveHandler);
-  document.addEventListener('mouseup', onMouseUpHandler);
+const getResources = () => {
+  return resources.value;
 };
 
 
+const eventTimeRangeContainerRef = ref()
+const onScrollText = (state: UseScrollReturn) => {
+  eventTimeRangeContainerRef.value.$el.scrollLeft = state.x.value
+}
 
-const tableRef = ref<HTMLTableElement>()
-const resizerRef = ref<HTMLElement>()
-
-const { height: tableHeight } = useElementSize(tableRef)
+const onResourcesResize = (e: MouseEvent) => {
+  MouseDownResizer(e, (options?.resources?.width as number), (newWidth: any) => {
+    if (options.resources) {
+      options.resources.width = newWidth
+    }
+  })
+};
 
 const dateTimeRanges = computed<Dayjs[]>(() => {
-  let dateTimes: Dayjs[] = []
-  let item = dayjs(props.startDate)
-  do {
-    dateTimes.push(item)
-    item = item.add(1, 'hour')
-  } while (item.isSameOrBefore(props.endDate))
-  return dateTimes
+
+  let item = dayjs(dates.value.from)
+  let diff = dayjs(dates.value.to).diff(dayjs(dates.value.from), 'hour')
+
+  return Array.from({ length: diff + 1 }, (v, i) => i).map((i) => item.add(i, 'hour'))
+})
+
+const eventsContainerSize = computed(() => {
+  return {
+    width: (dateTimeRanges.value.length + 1) * (options?.events?.width as number),
+    height: props.resources.length * (options?.rowHeight as number)
+  }
 })
 
 </script>
 
+<template>
+  <VSheet height="100%">
+    <!-- Header -->
+    <VRow no-gutters>
+      <VCol cols="auto">
+        <VSheet :width="options?.resources?.width">
+          <VToolbar color="transparent" density="comfortable" title="Name" />
+        </VSheet>
+      </VCol>
+      <VCol cols="auto">
+        <VSheet width="6" height="100%" color="rgba(0, 0, 0, 0.5)" class="scheduler-resizer text-white h-100"
+          @mousedown="onResourcesResize">|
+        </VSheet>
+      </VCol>
+      <VCol class="overflow-hidden" ref="eventTimeRangeContainerRef">
+        <VSheet :width="eventsContainerSize.width" :height="options.rowHeight" class="d-flex align-center"
+          :style="timeRangesStyles">
+          <template v-for="(item) in dateTimeRanges">
+            <VBtn :width="options?.events?.width" variant="text">{{ item.format("hh A") }}</VBtn>
+          </template>
+        </VSheet>
+      </VCol>
+    </VRow>
+    <!-- End Header -->
+    <!-- Scheduler Body -->
+    <VRow no-gutters class="h-100 overflow-auto">
+      <VCol cols="auto">
+        <VSheet :width="options?.resources?.width" :style="gridStyles" class="scheluder-resources-container">
+          <VSheet v-for="(resource, index) in resources" class="scheduler-resources-rows"
+            :height="options.rowHeight * resource.countOverlappingAppointments">
+            <VListItem :title="`${resource.id}: ${resource.name}`" lines="two" density="compact" />
+          </VSheet>
+        </VSheet>
+      </VCol>
+      <VCol cols="auto">
+        <VSheet width="6" height="100%" color="rgba(0, 0, 0, 0.5)" class="scheduler-resizer h-100"
+          @mousedown="onResourcesResize">|
+        </VSheet>
+      </VCol>
+      <VCol class="overflow-x-auto overflow-y-hidden" v-scroll="onScrollText">
+        <VSheet :width="eventsContainerSize.width" :height="eventsContainerSize.height" class="scheluder-events-container"
+          :style="gridStyles">
+          <template v-for="(resource, resourceIndex) in getResources()">
+            <VSheet :width="eventsContainerSize.width" :height="options.rowHeight * resource.countOverlappingAppointments"
+              draggable :data-resource-id="resource.id" class="scheduler-events-rows" ref="eventsContainerRef">
+              <template v-for="(event, eventIndex) in resource.events">
+                <vue-draggify :modelValue="{
+                    width: event.width,
+                    height: options.rowHeight,
+                    x: event.x,
+                    y: event.y,
+                  }" :options="{
+      container: {
+        width: eventsContainerSize.width,
+        height: options.rowHeight * resource.countOverlappingAppointments
+      },
+      grid: {
+        stickToGrid: true,
+        x: Math.round(options?.events?.width / 4),
+        y: options.rowHeight
+      },
+      resize: {
+        direction: 'x'
+      }
+    }" @onDragLeave="onDragLeave"
+                  @onDragEnd="($event: DragEvent, data: DraggifyState) => onDragEnd($event, data, resourceIndex, eventIndex)"
+                  @onDrop="($event: DragEvent, data: DraggifyState) => onDrop($event, data, resourceIndex, eventIndex)"
+                  @onResizeEnd="($event: MouseEvent, data: DraggifyState) => onResizeEnd($event, data, resourceIndex, eventIndex)">
+
+                  <VListItem density="compact" lines="three">
+                    <VListItemTitle>{{ event.text }}</VListItemTitle>
+                    <VListItemSubtitle>{{ `${event.start.format('HH:mm')}-${event.end.format('HH:mm')}` }}
+                    </VListItemSubtitle>
+                    <!-- <VListItemSubtitle>{{ resource.countOverlappingAppointments }}</VListItemSubtitle> -->
+                  </VListItem>
+                </vue-draggify>
+              </template>
+            </VSheet>
+          </template>
+        </VSheet>
+
+      </VCol>
+    </VRow>
+    <!-- End Scheduler Body -->
+  </VSheet>
+</template>
+
 <style lang="scss" scoped>
-table tbody th {
-  font-weight: bold;
-  text-align: left;
+.scheduler-resizer {
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scheluder-resources-container {
+  border-top: 1px solid #dddddd;
+
+  .scheduler-resources-rows {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #dddddd;
+  }
+}
+
+.scheluder-events-container {
   position: relative;
-}
+  border-top: 1px solid #dddddd;
 
-table th,
-
-table td {
-  padding: 0 !important;
-  border-right: 1px solid #c3c3c3;
-}
-
-table thead th:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 10 !important;
-  border-right: 4px solid #c3c3c3;
-}
-
-table tbody th {
-  position: sticky;
-  left: 0;
-  background: white;
-  z-index: 3;
-  border-right: 4px solid #c3c3c3;
-}
-
-.resizer {
-
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 4px;
-  cursor: col-resize;
-  user-select: none;
-}
-
-.resizer:hover,
-.resizing {
-  border-right: 4px solid blue;
-  right: -4px;
-  width: 8px;
-}
-
-.scheduler-event-resize {
-  cursor: col-resize;
-}
-
-// .v-data-table {
-//   thead>tr>th {
-//     background-color: #009879 !important;
-//     color: #ffffff !important;
-//     text-align: center !important;
-//     font-weight: bold;
-//   }
-
-//   th,
-//   td {
-//     border-right: 1px solid #f3f3f3;
-//   }
-
-//   td {
-//     padding: 0 !important;
-//   }
-
-//   tbody>tr>td:first-child,
-//   thead>tr>th:first-child {
-//     padding: 0 16px !important;
-//     position: sticky !important;
-//     position: -webkit-sticky !important;
-//     left: 0;
-//     z-index: 2;
-//     background-color: #009879 !important;
-//     color: #ffffff !important;
-//     text-align: left !important;
-//     min-width: 250px;
-//     display: flex;
-//     align-items: center;
-//   }
-
-//   thead>tr>th:first-child {
-//     z-index: 9999;
-//   }
-// }
-
-.scheduler {
-  .scheduler-item {
+  .scheduler-events-rows {
     position: relative;
+    border-bottom: 1px solid #dddddd;
+
+    &.scheduler-events-rows--dragover {
+      border-bottom: 1px solid #aaaaaa;
+    }
+
+    .scheduler-item {
+      position: absolute;
+    }
   }
 
   .scheduler-event {
     position: absolute;
-    z-index: 1;
-    cursor: pointer;
-    overflow: hidden;
+
+    .scheduler-event-resize {
+      cursor: ew-resize;
+    }
   }
 }
 </style>

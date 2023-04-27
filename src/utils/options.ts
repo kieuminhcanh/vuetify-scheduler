@@ -6,7 +6,17 @@ export const defaultOptions: SchedulerOptions = {
   resources: {
     width: 120
   },
+  grid: {
+    x: 30,
+    y: 56
+  },
+  resize: {
+    minWidth: 50,
+    minHeight: 50
+  },
   events: {
-    width: 120
+    width: 120,
+    height: 56,
+    margin: 6,
   }
 }

@@ -5,11 +5,12 @@ export interface SchedulerResource {
   id: number | string;
   image?: string;
   name: string;
+  events: SchedulerEvent[];
 }
 
 export interface SchedulerDate {
-  from: Dayjs | string | Date;
-  to: Dayjs | string | Date;
+  from: Dayjs;
+  to: Dayjs;
 }
 
 export interface SchedulerProps {
@@ -20,16 +21,18 @@ export interface SchedulerProps {
 }
 
 export interface SchedulerEvent {
-  start: Dayjs | string | Date | number;
-  end: Dayjs | string | Date | number,
+  id: number | string;
+  start: Dayjs;
+  end: Dayjs,
   resourceId: string | number,
   title?: String,
   text: String,
   icon?: String
   color?: String,
-  startPoint?: number,
-  endPoint?: number,
-  topPoint?: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
 }
 
 export interface SchedulerResourcesOptions {
@@ -45,5 +48,7 @@ export interface SchedulerOptions {
 }
 export interface SchedulerEventsOptions {
   width: number,
+  height: number,
+  margin: number,
   [key: string]: any
 }

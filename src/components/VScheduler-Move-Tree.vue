@@ -1,7 +1,7 @@
 
 
 <script setup lang="ts">
-import VueDraggify from "../../../vue-draggify/src/components/DraggifyMove.vue";
+import VueDraggify from "../../../vue-draggify/src/components/DraggifyEager.vue";
 import dayjs, { Dayjs } from 'dayjs';
 import isBetween from "dayjs/plugin/isBetween";
 dayjs.extend(isBetween);
@@ -68,156 +68,56 @@ const temp = reactive({
   height: 0
 })
 
-const eventsSorted = computed(() => {
-  let lastY = 0
-  const test = props.resources.sort((a, b) => a.name.localeCompare(b.name)).map((resource, resourceIndex) => {
-
-    const eventItems = events.value.filter(event => event.resourceId === resource.id)
-      .sort((a, b) => {
-        return a.start.isBefore(b.start) ? -1 : 1
-      })
-      .map((eventMap, eventIndex, array) => {
-        eventMap.x = eventMap.x ?? Math.round((eventMap.start.diff(dates.value.from, 'minute')) * pixelPerMinute.value)
-        return eventMap
-      }).reduce((eventsReduce: SchedulerEvent[], event, eventIndex) => {
 
 
-        const prev = eventsReduce[eventIndex - 1]
+const getEvents = (resource: any) => {
+  return events.value.filter(eventFilter => eventFilter.resourceId === resource.id)
+    .sort((a, b) => {
+      return a.start.isAfter(b.start) ? 1 : -1
+    })
+    .map((eventMap, eventIndex) => {
+      eventMap.x = eventMap.x ?? Math.round((eventMap.start.diff(dates.value.from, 'minute')) * pixelPerMinute.value)
 
-        if (!prev) {
-          event.y = lastY
+      return eventMap
+    }).reduce((eventsReduce: SchedulerEvent[], event, eventIndex) => {
+
+
+      const prev = eventsReduce[eventIndex - 1]
+
+      if (!prev) {
+        event.y = 0
+      } else {
+        if (event.start.isBetween(prev.start, prev.end, 'minute', "[)")) {
+          event.y = prev.y as number + options.rowHeight
         } else {
-
-          if (event.start.isBetween(prev.start, prev.end, 'minute', "[)")) {
-            event.y = prev.y as number + options.rowHeight
-          } else {
-            event.y = prev.y
-          }
-          lastY = event.y
+          event.y = prev.y
         }
-        return [
-          ...eventsReduce,
-          event
-        ]
-      }, [])
+      }
+      return [
+        ...eventsReduce,
+        event
+      ]
+    }, [])
+}
 
-    lastY = lastY + options.rowHeight
-    return { ...resource, ...{ events: eventItems } }
-  }, [])
-
-
-  console.log(test);
-  return test as SchedulerResource[]
-})
-// const eventsSorted = computed(() => {
-//   const aaa = events.value
-//     .sort((a, b) => {
-//       return a.start.isBefore(b.start) ? 1 : -1
-//     }).sort((a, b) => {
-//       return a.resourceId > b.resourceId ? 1 : -1
-//     })
-//     .map((eventMap, eventIndex) => {
-//       eventMap.x = eventMap.x ?? Math.round((eventMap.start.diff(dates.value.from, 'minute')) * pixelPerMinute.value)
-//       return eventMap
-//     }).reduce((eventsReduce: SchedulerEvent[], event, eventIndex) => {
-
-
-//       const prev = eventsReduce[eventIndex - 1]
-
-//       if (!prev) {
-//         event.y = 0
-//       } else {
-//         if (event.resourceId === prev.resourceId) {
-//           if (event.start.isBetween(prev.start, prev.end, 'minute', "[)")) {
-//             event.y = prev.y as number + options.rowHeight
-//           } else {
-//             event.y = prev.y
-//           }
-//         } else {
-//           event.y = prev.y + options.rowHeight
-//         }
-
-
-//       }
-//       return [
-//         ...eventsReduce,
-//         event
-//       ]
-//     }, [])
-// })
-
-const onEventStart = (eventStart: MouseEvent, item: any) => {
-  console.log('Event Start');
-  const target = eventStart.target as HTMLElement
-  const element = target.closest('.scheduler-events-item') as HTMLElement
-
-
-  axisStart.x = eventStart.clientX
-  axisStart.y = eventStart.clientY
-
-
+const onDragStart = (e: DragEvent, item: any) => {
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData("eventId", item.id)
+  }
+  axisStart.x = e.clientX
+  axisStart.y = e.clientY
 
   temp.x = item.x
   temp.y = item.y
   temp.width = item.width
   temp.height = item.height
-  console.log(temp);
 
-  const removeEventMove = useEventListener(document, 'mousemove', (eventMove: MouseEvent) => {
-
-
-    const axisMove = {
-      x: eventMove.clientX - axisStart.x,
-      y: eventMove.clientY - axisStart.y
-    }
-
-    const axisNew = {
-      x: temp.x + axisMove.x,
-      y: temp.y + axisMove.y
-    }
-
-    // timerStyle.value.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
-    // timerStyle.value.end = dates.value.from.add((axisNew.x + item.width) / pixelPerMinute.value, 'minute')
-    console.log(element.clientLeft);
-
-    if (target && element) {
-      console.log(eventMove.clientX);
-      element.classList.add('scheduler-events-item--moving')
-      element.style.position = 'fixed'
-      element.style.left = eventMove.clientX - (options.events.width / 2) + 'px'
-      element.style.top = eventMove.clientY - (options.events.height / 2) + 'px'
-      element.style.zIndex = '1000'
-    }
-
-
-    const event = events.value.find(event => event.id.toString() === item.id?.toString())
-    if (event) {
-
-      // event.resourceId = event.resourceId
-
-      // event.x = axisNew.x
-      // event.y = axisNew.y
-      // event.width = item.width
-      // event.height = item.height
-      // event.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
-      // event.end = dates.value.from.add((axisNew.x + item.width) / pixelPerMinute.value, 'minute')
-    }
-  })
-  const removeEventEnd = useEventListener(document, 'mouseup', (e: MouseEvent) => {
-    const axisEnd = {
-      x: e.clientX - axisStart.x,
-      y: e.clientY - axisStart.y
-    }
-    let axisNew = {
-      x: temp.x + axisEnd.x,
-      y: temp.y + axisEnd.y
-    }
-    removeEventMove()
-    removeEventEnd()
-  })
 }
 
 const onDrop = (e: DragEvent, resource: any) => {
+  console.log('Drop');
 
   const eventId = e.dataTransfer?.getData("eventId")
 
@@ -250,13 +150,6 @@ const { style: gridStyle } = reactiveStyle({
   backgroundSize: `100% ${options?.rowHeight}px`,
   'background-image': 'linear-gradient(to bottom, #000000 0px, transparent 0.5px)',
 })
-
-const { style: eventRowsStyle } = reactiveStyle({
-  'background-size': `${options?.events.width}px ${options?.rowHeight}px`,
-  "background-image": 'linear-gradient(to right, #000000 0px, transparent 0.5px), linear-gradient(to right, #c9c9c9 1px, transparent 1px)'
-})
-
-
 
 const { style: itemStyle } = reactiveStyle({
   width: `${options.events?.width}px`,
@@ -306,17 +199,17 @@ const dateTimeRanges = computed<Dayjs[]>(() => {
 const eventsContainerSize = computed(() => {
   return {
     width: (dateTimeRanges.value.length + 1) * (options?.events?.width as number),
-    height: eventsSorted.value.reduce((height, resource) => height += options.rowHeight * getHeight(resource), 0)
+    height: props.resources.length * (options?.rowHeight as number)
   }
 })
 
-const getHeight = (resource: SchedulerResource) => {
-
-  return resource.events.reduce((count: number, current: SchedulerEvent, index: number, array: SchedulerEvent[]) => {
-
-    const prev = array[index - 1];
-    if (prev && current.start.isBetween(prev.start, prev.end, "minute", "[)")) {
-      count++;
+const getHeight = (resource: any) => {
+  return getEvents(resource).reduce((count, current, index, events) => {
+    if (index > 0) {
+      const prev = events[index - 1];
+      if (current.start.isBetween(prev.start, prev.end, "minute", "[)")) {
+        count++;
+      }
     }
     return count;
   }, 1)
@@ -483,41 +376,70 @@ const onDrag = (e: DragEvent) => {
   timeHelper.value = { ...axisNew }
 
 }
+const onEventStart = (eventStart: MouseEvent, item: any) => {
+  axisStart.x = eventStart.clientX
+  axisStart.y = eventStart.clientY
+  const tartget = eventStart.target as HTMLElement
+  const element = tartget.closest('.scheduler-events-item') as HTMLElement
 
-const timerStyle = ref({
-  start: dayjs(),
-  end: dayjs(),
-})
 
-const onMoveEnd = (e: MouseEvent, data: any, event: SchedulerEvent) => {
 
-  const resource = getResourceIdFromHeight(data)
-  if (!resource) {
-    return
-  }
-  console.log(data);
-  event.resourceId = resource.id
-  event.x = data.x
-  event.y = data.y
-  event.width = data.width
-  event.height = data.height
-  event.start = dates.value.from.add(data.x / pixelPerMinute.value, 'minute')
-  event.end = dates.value.from.add((data.x + data.width) / pixelPerMinute.value, 'minute')
-}
+  temp.x = item.x
+  temp.y = item.y
+  temp.width = item.width
+  temp.height = item.height
+  console.log(eventStart.offsetX, eventStart.offsetY);
 
-const getResourceIdFromHeight = (data: any) => {
-  let y = data.y + options.rowHeight / 2
-  const resource = eventsSorted.value.find((resource, index) => {
-    console.log(options.rowHeight * getHeight(resource), y);
-
-    y = y - options.rowHeight * getHeight(resource)
-    if (y < 0) {
-      return true
+  const removeEventMove = useEventListener(document, 'mousemove', (eventMove: MouseEvent) => {
+    const axisMove = {
+      x: eventMove.clientX - axisStart.x,
+      y: eventMove.clientY - axisStart.y
     }
-    return false
+
+    const axisNew = {
+      x: temp.x + axisMove.x,
+      y: temp.y + axisMove.y
+    }
+
+
+    // console.log(axisStart.x - temp.x, axisStart.y - temp.y);
+
+    if (tartget && element) {
+      // console.log(element);
+      element.style.position = 'fixed'
+      element.style.left = eventMove.clientX - eventStart.offsetX + 'px'
+      element.style.top = eventMove.clientY - eventStart.offsetY + 'px'
+      element.style.zIndex = '1000'
+    }
+    // console.log(axisNew);
+
+    const event = events.value.find(event => event.id.toString() === item.id?.toString())
+    if (event) {
+
+      // event.resourceId = event.resourceId
+
+      // event.x = axisNew.x
+      // event.y = axisNew.y
+      // event.width = item.width
+      // event.height = item.height
+      // event.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
+      // event.end = dates.value.from.add((axisNew.x + item.width) / pixelPerMinute.value, 'minute')
+      item.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
+      item.end = dates.value.from.add((axisNew.x + item.width) / pixelPerMinute.value, 'minute')
+    }
   })
-  console.log(resource);
-  return resource
+  const removeEventEnd = useEventListener(document, 'mouseup', (eventEnd: MouseEvent) => {
+    const axisEnd = {
+      x: eventEnd.clientX - axisStart.x,
+      y: eventEnd.clientY - axisStart.y
+    }
+    let axisNew = {
+      x: temp.x + axisEnd.x,
+      y: temp.y + axisEnd.y
+    }
+    removeEventMove()
+    removeEventEnd()
+  })
 }
 
 </script>
@@ -551,10 +473,12 @@ const getResourceIdFromHeight = (data: any) => {
       <VCol cols="auto">
         <!-- Resources list -->
         <VSheet :width="options?.resources?.width" :style="gridStyle" class="scheluder-resources-container">
-          <VSheet v-for="(resource, index) in eventsSorted" :key="resource.id"
-            class="scheduler-rows scheduler-resources-rows" :height="options.rowHeight * getHeight(resource)">
-            <VListItem :title="`${resource.id}: ${resource.name}`" lines="two" density="compact" />
-          </VSheet>
+          <TransitionGroup>
+            <VSheet v-for="(resource, index) in resources" :key="resource.id"
+              class="scheduler-rows scheduler-resources-rows" :height="options.rowHeight * getHeight(resource)">
+              <VListItem :title="`${resource.id}: ${resource.name}`" lines="two" density="compact" />
+            </VSheet>
+          </TransitionGroup>
         </VSheet>
       </VCol>
       <VCol cols="auto">
@@ -569,38 +493,44 @@ const getResourceIdFromHeight = (data: any) => {
         <!-- <VBtn absolute offse>Hello</VBtn> -->
         <VSheet :width="eventsContainerSize.width" :height="eventsContainerSize.height" class="scheluder-events-container"
           :style="gridStyle">
-          <template v-for="( resource, eventIndex ) in eventsSorted">
-            <template v-for="( event, eventIndex ) in  resource.events" :key="event.id">
-              <!-- Event Item -->
-              <VueDraggify :model-value="event" class="scheduler-events-item" v-slot="{ x, y, width }"
-                @on-mouse-up="($event, data) => onMoveEnd($event, data, event)"
-                :options="{ grid: { x: 30, y: 56 }, resize: { direction: 'x' } }">
-                <div>
-                  <div>{{ `${event.id}-${event.resourceId}: ${event.text}` }} </div>
-                  <div class="text-caption">
-                    {{ dates.from.add(x as number / pixelPerMinute, 'minute').format("HH:mm") }} -
-                    {{ dates.from.add(((x as number) + (width as number)) / pixelPerMinute, 'minute').format("HH:mm") }}
-                  </div>
-                </div>
-              </VueDraggify>
-            </template>
-          </template>
-          <TransitinGroup>
+
+          <TransitionGroup>
             <!-- Event Rows -->
-            <template v-for="( resource, resourceIndex ) in  eventsSorted " :key="resource.id">
+            <template v-for="( resource, resourceIndex ) in  props.resources " :key="resource.id">
               <!-- Event Row -->
               <VSheet :width="eventsContainerSize.width" :height="options.rowHeight * getHeight(resource)"
                 class="scheduler-rows scheduler-events-rows" @drop="onDrop($event, resource)" @dragenter.prevent
-                @dragover.prevent :style="eventRowsStyle">
-              </VSheet>
-              <!-- Event Items -->
-            </template>
-          </TransitinGroup>
+                @dragover.prevent>
+                <!-- Event Items -->
+                <template v-for="( event, eventIndex ) in  getEvents(resource) " :key="event.id">
+                  <!-- Event Item -->
+                  <VSheet @mousedown="onEventStart($event, event)" :width="event.width" class="scheduler-events-item"
+                    :height="event.height" color="blue" :style="getEventStyle(event)">
+                    <!-- Resizer left -->
+                    <div
+                      style="z-index: 1;position: absolute;top: 0;left: 0;bottom: 0;height: 100%;width: 5px;cursor: e-resize;background-color: red;border-top-left-radius: 5px;border-bottom-left-radius: 5px;"
+                      @mousedown.stop="onResizeStart($event, event, 'left')">
+                    </div>
+                    <!-- Resizer right -->
+                    <div
+                      style="z-index: 1;position: absolute;top: 0;right: 0;bottom: 0;height: 100%;width: 5px;cursor: e-resize;background-color: red;border-top-right-radius: 5px;border-bottom-right-radius: 5px;"
+                      @mousedown.stop="onResizeStart($event, event, 'right')">
+                    </div>
 
+                    <!-- Event content -->
+                    <VListItem nav lines="two">
+                      <VListItemTitle>{{ event.id }}- {{ event.text }}</VListItemTitle>
+                      <VListItemSubtitle>{{ `${event.start.format('HH:mm')} -${event.end.format('HH:mm')} ` }}
+                      </VListItemSubtitle>
+                    </VListItem>
+                  </VSheet>
+                </template>
+              </VSheet>
+            </template>
+          </TransitionGroup>
         </VSheet>
       </VCol>
     </VRow>
-
     <!-- End Scheduler Body -->
   </VSheet>
 </template>
@@ -624,6 +554,7 @@ const getResourceIdFromHeight = (data: any) => {
   .scheduler-resources-rows {
     display: flex;
     align-items: center;
+    border-bottom: 1px solid #dddddd;
   }
 }
 
@@ -631,37 +562,20 @@ const getResourceIdFromHeight = (data: any) => {
   position: relative;
   border-top: 1px solid #dddddd;
 
-
-
   .scheduler-events-rows {
     position: relative;
 
     &.scheduler-events-rows--dragover {
       border-bottom: 1px solid #aaaaaa;
     }
-  }
 
-  .scheduler-events-item {
-    position: absolute;
-    cursor: pointer;
-    user-select: none;
-    display: flex;
-    align-items: center;
-    z-index: 1;
-
-    .scheduler-events-item-time {
-      visibility: hidden;
+    .scheduler-events-item {
       position: absolute;
-      top: -40px;
-      height: 30px;
-      width: 100%;
-      background-color: red;
-    }
-
-    &.scheduler-events-item--moving {
-      .scheduler-events-item-time {
-        visibility: visible;
-      }
+      // transition: transform 0.3s;
+      user-select: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
     }
   }
 
