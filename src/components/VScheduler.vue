@@ -7,16 +7,11 @@ import isBetween from "dayjs/plugin/isBetween";
 dayjs.extend(isBetween);
 import { PropType, computed, onMounted, reactive, ref } from 'vue';
 import { SchedulerOptions, SchedulerEvent, SchedulerResource, SchedulerDate, SchedulerEventsOptions, SchedulerResourcesOptions } from "../types";
-import { VCard, VCardText, VSheet, VToolbar, VTable, VListItem, VCol, VList, VRow, VAppBar, VContainer, VDivider, VHover, VListItemTitle, VListItemSubtitle, VBtn, VSnackbar } from "vuetify/components";
-import { vScroll } from '@vueuse/components'
+import { VCard, VCardText, VSheet, VToolbar, VTable, VListItem, VCol, VList, VRow, VAppBar, VContainer, VDivider, VHover, VListItemTitle, VListItemSubtitle, VBtn, VSnackbar, VToolbarItems, VSpacer } from "vuetify/components";
 
 import { MouseDownResizer } from "../utils";
-import { UseScrollReturn, clamp, useDebounceFn, useEventListener } from '@vueuse/core';
 import { defaultOptions } from "../utils/options";
 import deepMerge from "deepmerge";
-import { DraggifyDirection, DraggifyState } from '../../../vue-draggify/src/types';
-import { Resource } from '../types/resource';
-import { Event } from '../types/event';
 import { reactiveStyle } from "@vueuse/motion";
 
 const props = defineProps({
@@ -56,27 +51,15 @@ const pixelPerMinute = computed(() => {
   return (options?.events?.width as number) / 60
 })
 
-const axisStart = reactive({
-  x: 0,
-  y: 0,
-})
-
-const temp = reactive({
-  x: 0,
-  y: 0,
-  width: 0,
-  height: 0
-})
-
 const eventsSorted = computed(() => {
   let lastY = 0
   const test = props.resources.sort((a, b) => a.name.localeCompare(b.name)).map((resource, resourceIndex) => {
 
-    const eventItems = events.value.filter(event => event.resourceId === resource.id)
+    const eventItems = events.value.filter(event => event.start.isBetween(dates.value.from, dates.value.to, 'minute', "[]")).filter(event => event.resourceId === resource.id)
       .sort((a, b) => {
         return a.start.isBefore(b.start) ? -1 : 1
       })
-      .map((eventMap, eventIndex, array) => {
+      .map((eventMap) => {
         eventMap.x = eventMap.x ?? Math.round((eventMap.start.diff(dates.value.from, 'minute')) * pixelPerMinute.value)
         return eventMap
       }).reduce((eventsReduce: SchedulerEvent[], event, eventIndex) => {
@@ -105,141 +88,8 @@ const eventsSorted = computed(() => {
     return { ...resource, ...{ events: eventItems } }
   }, [])
 
-
-  console.log(test);
   return test as SchedulerResource[]
 })
-// const eventsSorted = computed(() => {
-//   const aaa = events.value
-//     .sort((a, b) => {
-//       return a.start.isBefore(b.start) ? 1 : -1
-//     }).sort((a, b) => {
-//       return a.resourceId > b.resourceId ? 1 : -1
-//     })
-//     .map((eventMap, eventIndex) => {
-//       eventMap.x = eventMap.x ?? Math.round((eventMap.start.diff(dates.value.from, 'minute')) * pixelPerMinute.value)
-//       return eventMap
-//     }).reduce((eventsReduce: SchedulerEvent[], event, eventIndex) => {
-
-
-//       const prev = eventsReduce[eventIndex - 1]
-
-//       if (!prev) {
-//         event.y = 0
-//       } else {
-//         if (event.resourceId === prev.resourceId) {
-//           if (event.start.isBetween(prev.start, prev.end, 'minute', "[)")) {
-//             event.y = prev.y as number + options.rowHeight
-//           } else {
-//             event.y = prev.y
-//           }
-//         } else {
-//           event.y = prev.y + options.rowHeight
-//         }
-
-
-//       }
-//       return [
-//         ...eventsReduce,
-//         event
-//       ]
-//     }, [])
-// })
-
-const onEventStart = (eventStart: MouseEvent, item: any) => {
-  console.log('Event Start');
-  const target = eventStart.target as HTMLElement
-  const element = target.closest('.scheduler-events-item') as HTMLElement
-
-
-  axisStart.x = eventStart.clientX
-  axisStart.y = eventStart.clientY
-
-
-
-  temp.x = item.x
-  temp.y = item.y
-  temp.width = item.width
-  temp.height = item.height
-  console.log(temp);
-
-  const removeEventMove = useEventListener(document, 'mousemove', (eventMove: MouseEvent) => {
-
-
-    const axisMove = {
-      x: eventMove.clientX - axisStart.x,
-      y: eventMove.clientY - axisStart.y
-    }
-
-    const axisNew = {
-      x: temp.x + axisMove.x,
-      y: temp.y + axisMove.y
-    }
-
-    // timerStyle.value.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
-    // timerStyle.value.end = dates.value.from.add((axisNew.x + item.width) / pixelPerMinute.value, 'minute')
-    console.log(element.clientLeft);
-
-    if (target && element) {
-      console.log(eventMove.clientX);
-      element.classList.add('scheduler-events-item--moving')
-      element.style.position = 'fixed'
-      element.style.left = eventMove.clientX - (options.events.width / 2) + 'px'
-      element.style.top = eventMove.clientY - (options.events.height / 2) + 'px'
-      element.style.zIndex = '1000'
-    }
-
-
-    const event = events.value.find(event => event.id.toString() === item.id?.toString())
-    if (event) {
-
-      // event.resourceId = event.resourceId
-
-      // event.x = axisNew.x
-      // event.y = axisNew.y
-      // event.width = item.width
-      // event.height = item.height
-      // event.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
-      // event.end = dates.value.from.add((axisNew.x + item.width) / pixelPerMinute.value, 'minute')
-    }
-  })
-  const removeEventEnd = useEventListener(document, 'mouseup', (e: MouseEvent) => {
-    const axisEnd = {
-      x: e.clientX - axisStart.x,
-      y: e.clientY - axisStart.y
-    }
-    let axisNew = {
-      x: temp.x + axisEnd.x,
-      y: temp.y + axisEnd.y
-    }
-    removeEventMove()
-    removeEventEnd()
-  })
-}
-
-const onDrop = (e: DragEvent, resource: any) => {
-
-  const eventId = e.dataTransfer?.getData("eventId")
-
-  const event = events.value.find(event => event.id.toString() === eventId?.toString())
-  if (event) {
-    const axisEnd = {
-      x: e.clientX - axisStart.x,
-      y: e.clientY - axisStart.y
-    }
-
-    let axisNew = {
-      x: temp.x + axisEnd.x,
-      y: temp.y + axisEnd.y
-    }
-
-    event.resourceId = resource.id
-    event.x = axisNew.x
-    event.start = dates.value.from.add(axisNew.x / pixelPerMinute.value, 'minute')
-    event.end = dates.value.from.add((axisNew.x + temp.width) / pixelPerMinute.value, 'minute')
-
-  }
-}
 
 const { style: timeRangesStyle } = reactiveStyle({
   backgroundSize: `${options.events?.width}px`,
@@ -252,20 +102,11 @@ const { style: gridStyle } = reactiveStyle({
 })
 
 const { style: eventRowsStyle } = reactiveStyle({
-  'background-size': `${options?.events.width}px ${options?.rowHeight}px`,
-  "background-image": 'linear-gradient(to right, #000000 0px, transparent 0.5px), linear-gradient(to right, #c9c9c9 1px, transparent 1px)'
+  'background-size': `100% ${options?.rowHeight}px`,
+  "background-image": 'linear-gradient(to right, #000000 0px, transparent 0.5px)'
+  // 'background-size': `${options?.events.width}px ${options?.rowHeight}px`,
+  // "background-image": 'linear-gradient(to right, #000000 0px, transparent 0.5px), linear-gradient(to right, #c9c9c9 1px, transparent 1px)'
 })
-
-
-
-const { style: itemStyle } = reactiveStyle({
-  width: `${options.events?.width}px`,
-  height: `${options?.rowHeight}px`,
-
-  'cursor': 'move'
-})
-
-
 
 const events = ref<SchedulerEvent[]>(props.events.map((event, index) => {
   const start = dayjs(event.start)
@@ -280,12 +121,7 @@ const events = ref<SchedulerEvent[]>(props.events.map((event, index) => {
   }
 }))
 
-
-const eventTimeRangeContainerRef = ref()
-
-const onScrollText = (state: UseScrollReturn) => {
-  eventTimeRangeContainerRef.value.$el.scrollLeft = state.x.value
-}
+const eventsContainerRef = ref()
 
 const onResourcesResize = (e: MouseEvent) => {
   MouseDownResizer(e, (options?.resources?.width as number), (newWidth: any) => {
@@ -305,12 +141,12 @@ const dateTimeRanges = computed<Dayjs[]>(() => {
 
 const eventsContainerSize = computed(() => {
   return {
-    width: (dateTimeRanges.value.length + 1) * (options?.events?.width as number),
-    height: eventsSorted.value.reduce((height, resource) => height += options.rowHeight * getHeight(resource), 0)
+    width: dateTimeRanges.value.length * (options?.events?.width as number),
+    height: eventsSorted.value.reduce((height, resource) => height += options.rowHeight * getHeightOfResource(resource), 0)
   }
 })
 
-const getHeight = (resource: SchedulerResource) => {
+const getHeightOfResource = (resource: SchedulerResource) => {
 
   return resource.events.reduce((count: number, current: SchedulerEvent, index: number, array: SchedulerEvent[]) => {
 
@@ -321,181 +157,13 @@ const getHeight = (resource: SchedulerResource) => {
     return count;
   }, 1)
 }
-const draggable = ref(true)
-
-const onResizeStart = (e: MouseEvent, item: any, direction: "top" | "right" | "bottom" | "left" | "top-left" | "top-right" | "bottom-left" | "bottom-right") => {
-  draggable.value = false
-
-  const resizer = e.target as HTMLDivElement
-  resizer.style.cursor = 'col-resize'
-  document.body.style.cursor = 'col-resize'
-
-
-
-  axisStart.x = e.clientX
-  axisStart.y = e.clientY
-
-  temp.x = item.x
-  temp.y = item.y
-  temp.width = item.width
-  temp.height = item.height
-
-  let data = { ...temp }
-
-  const removeResizeMove = useEventListener(document, 'mousemove', (e: MouseEvent) => {
-    const moveAxis = {
-      x: e.clientX - axisStart.x,
-      y: e.clientY - axisStart.y
-    }
-
-    const axisNew = {
-      x: temp.x + moveAxis.x,
-      y: temp.y + moveAxis.y,
-      width: temp.width + moveAxis.x,
-      height: temp.height + moveAxis.y
-    }
-
-
-    // if (options.grid.stickToGrid) {
-    //   axisNew.x = Math.round(axisNew.x / options.grid.x) * options.grid.x;
-    //   axisNew.y = Math.round(axisNew.y / options.grid.y) * options.grid.y;
-    //   axisNew.width = Math.round(axisNew.width / options.grid.x) * options.grid.x;
-    //   axisNew.height = Math.round(axisNew.height / options.grid.y) * options.grid.y;
-    // }
-    // console.log(axisNew);
-
-
-    switch (direction) {
-      case "top":
-        data.x = temp.x
-        data.y = clamp(axisNew.y, 0, temp.y + temp.height - options.resize.minHeight)
-        data.width = temp.width
-        data.height = temp.height - (data.y - temp.y)
-        break;
-      case "right":
-        data.x = temp.x
-        data.y = temp.y
-        data.width = clamp(axisNew.width, options.resize.minWidth, eventsContainerSize.value.width - temp.x)
-        data.height = temp.height
-        break;
-      case "bottom":
-        data.x = temp.x
-        data.y = temp.y
-        data.width = temp.width
-        data.height = clamp(axisNew.height, options.resize.minHeight, eventsContainerSize.value.height - temp.y)
-        break;
-      case "left":
-        data.x = clamp(axisNew.x, 0, temp.x + temp.width - options.resize.minWidth)
-        data.y = temp.y
-        data.width = temp.width - (data.x - temp.x)
-        data.height = temp.height
-        break;
-      case "top-left":
-        data.x = clamp(axisNew.x, 0, temp.x + temp.width - options.resize.minWidth)
-        data.y = clamp(axisNew.y, 0, temp.y + temp.height - options.resize.minHeight)
-        data.width = temp.width - (data.x - temp.x)
-        data.height = temp.height - (data.y - temp.y)
-        break;
-      case "top-right":
-        data.x = temp.x
-        data.y = clamp(axisNew.y, 0, temp.y + temp.height - options.resize.minHeight)
-        data.width = clamp(axisNew.width, options.resize.minWidth, eventsContainerSize.value.width - temp.x)
-        data.height = temp.height - (data.y - temp.y)
-        break;
-      case "bottom-left":
-        data.x = clamp(axisNew.x, 0, temp.x + temp.width - options.resize.minWidth)
-        data.y = temp.y
-        data.width = temp.width - (data.x - temp.x)
-        data.height = clamp(axisNew.height, options.resize.minHeight, eventsContainerSize.value.height - temp.y)
-        break;
-      case "bottom-right":
-        data.x = temp.x
-        data.y = temp.y
-        data.width = clamp(axisNew.width, options.resize.minWidth, eventsContainerSize.value.width - temp.x)
-        data.height = clamp(axisNew.height, options.resize.minHeight, eventsContainerSize.value.height - temp.y)
-        break;
-      default:
-        break;
-    }
-
-    const event = events.value.find(event => event.id.toString() === item.id?.toString())
-    if (event) {
-      const axisEnd = {
-        x: e.clientX - axisStart.x,
-        y: e.clientY - axisStart.y
-      }
-
-      let axisNew = {
-        x: temp.x + axisEnd.x,
-        y: temp.y + axisEnd.y
-      }
-
-      event.resourceId = event.resourceId
-      console.log(data);
-
-      event.x = data.x
-      event.y = data.y
-      event.width = data.width
-      event.height = data.height
-      event.start = dates.value.from.add(data.x / pixelPerMinute.value, 'minute')
-      event.end = dates.value.from.add((data.x + data.width) / pixelPerMinute.value, 'minute')
-    }
-  });
-
-
-
-  const removeResizeEnd = useEventListener(document, 'mouseup', (e: MouseEvent) => {
-    resizer.style.removeProperty('cursor')
-    document.body.style.removeProperty('cursor')
-    draggable.value = true
-    removeResizeMove()
-    removeResizeEnd()
-  });
-
-}
-const getEventStyle = (event: SchedulerEvent) => {
-  return {
-    top: `${event.y}px`,
-    left: `${event.x}px`,
-    width: `${event.width}px`,
-    height: `${event.height - options.events.margin}px`,
-    'margin-top': `${options.events.margin / 2}px `,
-  }
-}
-
-const timeHelper = ref({
-  x: 0,
-  y: 0
-})
-
-const onDrag = (e: DragEvent) => {
-
-  const axisMove = {
-    x: e.clientX - axisStart.x,
-    y: e.clientY - axisStart.y
-  }
-
-  let axisNew = {
-    x: temp.x + axisMove.x,
-    y: temp.y + axisMove.y
-  }
-
-  timeHelper.value = { ...axisNew }
-
-}
-
-const timerStyle = ref({
-  start: dayjs(),
-  end: dayjs(),
-})
 
 const onMoveEnd = (e: MouseEvent, data: any, event: SchedulerEvent) => {
 
-  const resource = getResourceIdFromHeight(data)
+  const resource = getResourceFromHeight(data)
   if (!resource) {
     return
   }
-  console.log(data);
   event.resourceId = resource.id
   event.x = data.x
   event.y = data.y
@@ -505,97 +173,139 @@ const onMoveEnd = (e: MouseEvent, data: any, event: SchedulerEvent) => {
   event.end = dates.value.from.add((data.x + data.width) / pixelPerMinute.value, 'minute')
 }
 
-const getResourceIdFromHeight = (data: any) => {
-  let y = data.y + options.rowHeight / 2
+const getResourceFromHeight = (data: any) => {
+  let y = data.y
   const resource = eventsSorted.value.find((resource, index) => {
-    console.log(options.rowHeight * getHeight(resource), y);
-
-    y = y - options.rowHeight * getHeight(resource)
+    y = y - options.rowHeight * getHeightOfResource(resource)
     if (y < 0) {
       return true
     }
     return false
   })
-  console.log(resource);
+
   return resource
 }
 
+const resourceActive = ref<SchedulerResource>()
+
+const onMouseMove = (e: MouseEvent) => {
+
+
+  const rect = eventsContainerRef.value.$el.getBoundingClientRect()
+  const axis = {
+    x: e.clientX,
+    y: e.clientY
+  }
+  const y = axis.y - rect.top
+  const resource = getResourceFromHeight({ y })
+  if (resource) {
+    resourceActive.value = resource
+  }
+
+}
+
+const getTimeDisplay = (x: number, width: number) => {
+  let display = [];
+  display.push(dates.value.from.add(x as number / pixelPerMinute.value, 'minute').format('HH:mm A'));
+  display.push(dates.value.from.add(((x as number) + (width as number)) / pixelPerMinute.value, 'minute').format("HH:mm A"))
+  return display.join(' - ')
+}
+
+const changeDate = (name: "next" | "prev") => {
+  switch (name) {
+    case "next":
+      dates.value.from = dates.value.from.add(1, 'day')
+      dates.value.to = dates.value.to.add(1, 'day')
+      break;
+    case "prev":
+      dates.value.from = dates.value.from.subtract(1, 'day')
+      dates.value.to = dates.value.to.subtract(1, 'day')
+      break;
+  }
+}
 </script>
 
 <template>
-  <VSheet height="100%">
-    <!-- Header -->
-    <VRow no-gutters>
-      <VCol cols="auto">
-        <VSheet :width="options?.resources?.width">
+  <VSheet height="100%" class="scheduler-container">
+    <VToolbar>
+      <VBtn icon="mdi-chevron-left" @click="changeDate('prev')"></VBtn>
+      <VSpacer />
+      <VBtn>{{ dates.from.format("ddd MM-DD") }}</VBtn>
+      <VSpacer />
+      <VBtn icon="mdi-chevron-right" @click="changeDate('next')"></VBtn>
+    </VToolbar>
+    <VRow no-gutters class="h-100 overflow-auto">
+      <VCol cols="auto" class="scheluder-resources-container">
+        <!-- Resources Header -->
+        <VSheet class="scheduler-header" :width="options?.resources?.width" :height="options.rowHeight">
           <VToolbar color="transparent" density="comfortable" title="Name" />
         </VSheet>
-      </VCol>
-      <VCol cols="auto">
-        <VSheet width="6" height="100%" color="rgba(0, 0, 0, 0.5)" class="scheduler-resizer text-white h-100"
-          @mousedown="onResourcesResize">|
-        </VSheet>
-      </VCol>
-      <VCol class="overflow-hidden" ref="eventTimeRangeContainerRef">
-        <VSheet :width="eventsContainerSize.width" :height="options.rowHeight" class="d-flex align-center"
-          :style="timeRangesStyle">
-          <template v-for="(item) in dateTimeRanges">
-            <VBtn :width="options?.events?.width" variant="text">{{ item.format("hh A") }}</VBtn>
-          </template>
-        </VSheet>
-      </VCol>
-    </VRow>
-    <!-- End Header -->
-    <!-- Scheduler Body -->
-    <VRow no-gutters class="h-100 overflow-auto">
-      <VCol cols="auto">
-        <!-- Resources list -->
-        <VSheet :width="options?.resources?.width" :style="gridStyle" class="scheluder-resources-container">
+        <!-- Resources List -->
+        <VSheet :width="options?.resources?.width" :style="gridStyle">
           <VSheet v-for="(resource, index) in eventsSorted" :key="resource.id"
-            class="scheduler-rows scheduler-resources-rows" :height="options.rowHeight * getHeight(resource)">
+            :color="resource.id === resourceActive?.id ? 'blue' : ''" class="scheduler-rows scheduler-resources-rows "
+            :height="options.rowHeight * getHeightOfResource(resource)">
             <VListItem :title="`${resource.id}: ${resource.name}`" lines="two" density="compact" />
           </VSheet>
         </VSheet>
       </VCol>
-      <VCol cols="auto">
+      <VCol cols="auto" class="scheduler-resizer-container">
         <!-- Resizer -->
         <VSheet width="6" height="100%" color="rgba(0, 0, 0, 0.5)" class="scheduler-resizer h-100"
           @mousedown="onResourcesResize">|
         </VSheet>
       </VCol>
       <!-- Events Container -->
-      <VCol class="overflow-x-auto overflow-y-hidden" v-scroll="onScrollText">
+      <VCol class="overflow-x-auto overflow-y-hidden scheduler-events-container">
+        <!-- Events Header -Time Range -->
+        <VSheet :width="eventsContainerSize.width" :height="options.rowHeight"
+          class="d-flex align-center scheduler-header" :style="timeRangesStyle">
 
-        <!-- <VBtn absolute offse>Hello</VBtn> -->
-        <VSheet :width="eventsContainerSize.width" :height="eventsContainerSize.height" class="scheluder-events-container"
-          :style="gridStyle">
-          <template v-for="( resource, eventIndex ) in eventsSorted">
-            <template v-for="( event, eventIndex ) in  resource.events" :key="event.id">
+          <template v-for="(item) in dateTimeRanges">
+            <VBtn :width="options?.events?.width" variant="text">{{ item.format("hh A") }}</VBtn>
+          </template>
+        </VSheet>
+        <!-- Events -->
+        <VSheet :width="eventsContainerSize.width" :height="eventsContainerSize.height" class="scheduler-events"
+          :style="gridStyle" ref="eventsContainerRef" @mousemove="onMouseMove">
+          <template v-for="(resource) in eventsSorted">
+            <template v-for="(event) in resource.events" :key="event.id">
               <!-- Event Item -->
-              <VueDraggify :model-value="event" class="scheduler-events-item" v-slot="{ x, y, width }"
+              <VueDraggify :model-value="event" class="scheduler-events-item px-3"
                 @on-mouse-up="($event, data) => onMoveEnd($event, data, event)"
                 :options="{ grid: { x: 30, y: 56 }, resize: { direction: 'x' } }">
-                <div>
-                  <div>{{ `${event.id}-${event.resourceId}: ${event.text}` }} </div>
-                  <div class="text-caption">
-                    {{ dates.from.add(x as number / pixelPerMinute, 'minute').format("HH:mm") }} -
-                    {{ dates.from.add(((x as number) + (width as number)) / pixelPerMinute, 'minute').format("HH:mm") }}
+                <template #top="{ x, width, isHovering }">
+                  <VSheet v-if="isHovering" position="absolute" width="200" height="54"
+                    class="elevation-2 d-flex align-center"
+                    style="top: -60px;left: 0; right: 0; margin: 0 auto; z-index: 10000;">
+                    <VListItem nav lines="two">
+                      <VListItemTitle>{{ event.text }}</VListItemTitle>
+                      <VListItemSubtitle>{{ getTimeDisplay(x as number, width as number) }}
+                      </VListItemSubtitle>
+                    </VListItem>
+                  </VSheet>
+                </template>
+                <template #default="{ x, width }">
+                  <div>
+                    <div>{{ `${event.id} -${event.resourceId}: ${event.text} ` }} </div>
+                    <div class="text-caption">
+                      {{ dates.from.add(x as number / pixelPerMinute, 'minute').format("HH:mm") }} -
+                      {{ dates.from.add(((x as number) + (width as number)) / pixelPerMinute, 'minute').format("HH:mm")
+                      }}
+                    </div>
                   </div>
-                </div>
+                </template>
               </VueDraggify>
             </template>
           </template>
-          <TransitinGroup>
-            <!-- Event Rows -->
-            <template v-for="( resource, resourceIndex ) in  eventsSorted " :key="resource.id">
-              <!-- Event Row -->
-              <VSheet :width="eventsContainerSize.width" :height="options.rowHeight * getHeight(resource)"
-                class="scheduler-rows scheduler-events-rows" @drop="onDrop($event, resource)" @dragenter.prevent
-                @dragover.prevent :style="eventRowsStyle">
-              </VSheet>
-              <!-- Event Items -->
-            </template>
-          </TransitinGroup>
+          <!-- Event Rows -->
+          <template v-for="(    resource, resourceIndex    ) in     eventsSorted    " :key="resource.id">
+            <!-- Event Row -->
+            <VSheet :width="eventsContainerSize.width" :height="options.rowHeight * getHeightOfResource(resource)"
+              class="scheduler-rows scheduler-events-rows" :style="eventRowsStyle">
+            </VSheet>
+            <!-- Event Items -->
+          </template>
 
         </VSheet>
       </VCol>
@@ -606,70 +316,65 @@ const getResourceIdFromHeight = (data: any) => {
 </template>
 
 <style lang="scss" scoped>
-.scheduler-resizer {
-  cursor: ew-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scheduler-rows {
-  border-bottom: 1px solid #dddddd;
-  transition: height 0.5s ease;
-}
-
-.scheluder-resources-container {
-  border-top: 1px solid #dddddd;
-
-  .scheduler-resources-rows {
-    display: flex;
-    align-items: center;
-  }
-}
-
-.scheluder-events-container {
-  position: relative;
-  border-top: 1px solid #dddddd;
-
-
-
-  .scheduler-events-rows {
-    position: relative;
-
-    &.scheduler-events-rows--dragover {
-      border-bottom: 1px solid #aaaaaa;
-    }
+.scheduler-container {
+  .scheduler-header {
+    border-bottom: 3px solid #ccc;
   }
 
-  .scheduler-events-item {
-    position: absolute;
-    cursor: pointer;
+  .scheduler-rows {
+    border-bottom: 1px solid #dddddd;
+    transition: height 0.5s ease;
+  }
+
+  // Resources Container
+  .scheluder-resources-container {
+    border-top: 1px solid #dddddd;
     user-select: none;
-    display: flex;
-    align-items: center;
-    z-index: 1;
 
-    .scheduler-events-item-time {
-      visibility: hidden;
-      position: absolute;
-      top: -40px;
-      height: 30px;
-      width: 100%;
-      background-color: red;
-    }
-
-    &.scheduler-events-item--moving {
-      .scheduler-events-item-time {
-        visibility: visible;
-      }
+    .scheduler-resources-rows {
+      display: flex;
+      align-items: center;
     }
   }
 
-  .scheduler-event {
-    position: absolute;
-
-    .scheduler-event-resize {
+  .scheduler-resizer-container {
+    .scheduler-resizer {
       cursor: ew-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+    }
+  }
+
+
+  .scheduler-events-container {
+    .scheduler-events {
+      position: relative;
+      border-top: 1px solid #dddddd;
+
+      .scheduler-events-rows {
+        position: relative;
+
+        &:hover {
+          background-color: #f9f9f9;
+        }
+
+        &.scheduler-events-rows--dragover {
+          border-bottom: 1px solid #aaaaaa;
+        }
+      }
+
+      .scheduler-events-item {
+        position: absolute;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        z-index: 1;
+
+
+      }
     }
   }
 }
