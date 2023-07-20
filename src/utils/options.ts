@@ -15,7 +15,7 @@ export const defaultOptions: SchedulerOptions = {
     minHeight: 50
   },
   events: {
-    width: 120,
+    width: 240,
     height: 56,
     margin: 6,
   }

@@ -33,6 +33,7 @@ export interface SchedulerEvent {
   y: number,
   width: number,
   height: number,
+  [key: string]: any
 }
 
 export interface SchedulerResourcesOptions {

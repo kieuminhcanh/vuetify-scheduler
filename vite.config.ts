@@ -7,14 +7,13 @@ export default defineConfig({
     vue(),
     dts({
       outputDir: 'dist',
-      entryRoot: 'src/plugins/vuetify-notifier',
     })
   ],
   build: {
     lib: {
-      entry: 'src/plugins/vuetify-notifier/index.ts',
-      name: 'VuetifyNotifier',
-      fileName: 'vuetify-notifier',
+      entry: 'src/index.ts',
+      name: 'VuetifyScheduler',
+      fileName: 'vuetify-scheduler',
     },
     rollupOptions: {
       external: ['vue'],

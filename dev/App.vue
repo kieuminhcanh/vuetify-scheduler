@@ -49,71 +49,132 @@ import { SchedulerProps } from "../src/types";
 
 const schedulerConfig = reactive({
   dates: {
-    from: '2017-01-01 06:00',
-    to: '2017-01-01 21:00',
+    from: '2023-04-14 06:00',
+    to: '2023-04-14 21:00',
   },
   resources: [
-    { id: 'r1', name: 'Mike' },
-    { id: 'r2', name: 'Linda' },
-    { id: 'r3', name: 'Don' },
-    { id: 'r4', name: 'Karen' },
-    { id: 'r5', name: 'Doug' },
-    { id: 'r6', name: 'Peter' },
-    { id: 'r7', name: 'Sam' },
-    { id: 'r8', name: 'Melissa' },
-    { id: 'r9', name: 'John' },
-    { id: 'r10', name: 'Ellen' }
+    {
+      "id": "98ee62dd-2b02-4da9-88dd-b452a7b33e36",
+      "name": "Ava O'Reilly V"
+    },
+    {
+      "id": "98ee62dd-ac30-4624-a433-08a15da3447a",
+      "name": "Hanna Lakin"
+    },
+    {
+      "id": "98ee62dd-c9ab-4ff2-a66b-41bdab066a9b",
+      "name": "Leonor Strosin II"
+    },
+    {
+      "id": "98ee62dd-f276-4908-81b9-c84d83b6eb4f",
+      "name": "Lavern Pollich PhD"
+    },
+    {
+      "id": "98ee62de-1726-41dd-a88a-64236306b86a",
+      "name": "Mrs. Chyna Fadel III"
+    },
+    {
+      "id": "98ee62de-3cfe-47ce-9918-f7674b6ead54",
+      "name": "Mrs. Odie Aufderhar V"
+    },
+    {
+      "id": "98ee62de-5b4c-4748-9031-d7eef135bc26",
+      "name": "Dr. Octavia Dooley DVM"
+    },
+    {
+      "id": "98ee62de-7537-4bb9-8e97-ac5668e65ad2",
+      "name": "Parker Carroll"
+    },
+    {
+      "id": "98ee62de-8fef-42fe-bc2c-0e3a008f1e7f",
+      "name": "Karlie Wunsch"
+    },
+    {
+      "id": "98ee62de-ae77-4f9c-bebc-7fd81e056346",
+      "name": "Greta Mayert"
+    }
   ],
   events: [
     {
-      resourceId: 'r1',
-      start: '2017-01-01 10:00',
-      end: '2017-01-01 14:00',
-      text: 'Click me',
+      "id": "98ee62e6-224e-4e41-bfc1-d14b29e7901e",
+      "no": "1",
+      "status": "pending",
+      "start": "2023-04-14 11:18:08",
+      "end": "2023-04-14 11:34:08",
+      "duration": 16,
+      "resourceId": "98ee62de-7537-4bb9-8e97-ac5668e65ad2"
     },
     {
-      resourceId: 'r1',
-      start: '2017-01-01 11:00',
-      end: '2017-01-01 12:00',
-      text: 'Drag me ',
+      "id": "98ee62e6-a73c-4324-a75e-6470a9e96d6b",
+      "no": "9",
+      "status": "pending",
+      "start": "2023-04-14 11:18:09",
+      "end": "2023-04-14 11:35:09",
+      "duration": 17,
+      "resourceId": "98ee62de-1726-41dd-a88a-64236306b86a"
     },
     {
-      resourceId: 'r1',
-      start: '2017-01-01 10:00',
-      end: '2017-01-01 12:00',
-      text: 'Double click me',
-      color: 'purple',
+      "id": "98ee62e7-9c31-45ae-83a5-a8b25591f125",
+      "no": "25",
+      "status": "pending",
+      "start": "2023-04-14 11:18:09",
+      "end": "2023-04-14 11:35:09",
+      "duration": 17,
+      "resourceId": "98ee62de-7537-4bb9-8e97-ac5668e65ad2"
     },
     {
-      resourceId: 'r4',
-      start: new Date(2017, 0, 1, 8, 12),
-      end: new Date(2017, 0, 1, 11),
-      text: 'Right click me',
+      "id": "98ee62e7-d66a-4d4d-b200-b8aa114bb262",
+      "no": "29",
+      "status": "pending",
+      "start": "2023-04-14 11:18:09",
+      "end": "2023-04-14 11:40:09",
+      "duration": 22,
+      "resourceId": "98ee62de-3cfe-47ce-9918-f7674b6ead54"
     },
     {
-      resourceId: 'r5',
-      start: new Date(2017, 0, 1, 15),
-      end: new Date(2017, 0, 1, 17),
-      text: 'Resize me',
+      "id": "98ee62e8-bfb2-4e38-aa20-7e136885c5d0",
+      "no": "45",
+      "status": "pending",
+      "start": "2023-04-14 11:18:10",
+      "end": "2023-04-14 11:35:10",
+      "duration": 17,
+      "resourceId": "98ee62de-3cfe-47ce-9918-f7674b6ead54"
     },
     {
-      resourceId: 'r6',
-      start: new Date(2017, 0, 1, 16),
-      end: new Date(2017, 0, 1, 19),
-      text: 'Important meeting',
-      color: 'red'
+      "id": "98ee62e8-f83d-4423-bd7b-950a93bb37d7",
+      "no": "49",
+      "status": "pending",
+      "start": "2023-04-14 11:18:10",
+      "end": "2023-04-14 11:44:10",
+      "duration": 26,
+      "resourceId": "98ee62dd-2b02-4da9-88dd-b452a7b33e36"
     },
     {
-      resourceId: 'r6',
-      start: new Date(2017, 0, 1, 6),
-      end: new Date(2017, 0, 1, 8),
-      text: 'Sports event',
+      "id": "98ee62ea-56df-45d2-9fb8-22c496513aea",
+      "no": "73",
+      "status": "pending",
+      "start": "2023-04-14 11:18:11",
+      "end": "2023-04-14 11:37:11",
+      "duration": 19,
+      "resourceId": "98ee62de-ae77-4f9c-bebc-7fd81e056346"
     },
     {
-      resourceId: 'r7',
-      start: new Date(2017, 0, 1, 9),
-      end: new Date(2017, 0, 1, 11, 30),
-      text: "Dad's birthday!",
+      "id": "98ee62ea-ce62-4ea2-a6fc-c8ef846d04c7",
+      "no": "81",
+      "status": "pending",
+      "start": "2023-04-14 11:18:11",
+      "end": "2023-04-14 11:23:11",
+      "duration": 5,
+      "resourceId": "98ee62de-1726-41dd-a88a-64236306b86a"
+    },
+    {
+      "id": "98ee62eb-b8ea-4ce0-8b7b-bf70403fbc75",
+      "no": "97",
+      "status": "pending",
+      "start": "2023-04-14 11:18:12",
+      "end": "2023-04-14 11:35:12",
+      "duration": 17,
+      "resourceId": "98ee62dd-ac30-4624-a433-08a15da3447a"
     }
   ],
   options: {

@@ -14,5 +14,5 @@ const vuetify = createVuetify({ components, directives, })
 const app = createApp(App);
 
 app.use(vuetify);
-// app.use(VueDraggify);
+
 app.mount('#app');
